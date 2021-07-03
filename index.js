@@ -36,7 +36,7 @@ app.get("/api/persons", (_, res) => {
   });
 });
 
-app.get("/api/persons/:id", (req, res) => {
+app.get("/api/persons/:id", (req, res, next) => {
   Person.findById(req.params.id)
     .then((person) => {
       if (person) return res.status(200).json(person);
@@ -45,25 +45,23 @@ app.get("/api/persons/:id", (req, res) => {
     .catch((error) => next(error));
 });
 
-app.post("/api/persons", (req, res) => {
+app.post("/api/persons", (req, res, next) => {
   const { name, number } = req.body;
 
-  if (!number) return res.status(400).json({ error: "missing number" });
-  if (!name) return res.status(400).json({ error: "missing name" });
-
-  Person.find({}).then((persons) => {
-    const person = new Person({
-      name,
-      number,
-    });
-
-    person.save().then((person) => {
-      res.json(person);
-    });
+  const person = new Person({
+    name,
+    number,
   });
+
+  person
+    .save()
+    .then((person) => {
+      res.json(person);
+    })
+    .catch((error) => next(error));
 });
 
-app.put("/api/persons/:id", (req, res) => {
+app.put("/api/persons/:id", (req, res, next) => {
   const { name, number } = req.body;
 
   if (!number) return res.status(400).json({ error: "missing number" });
@@ -73,12 +71,15 @@ app.put("/api/persons/:id", (req, res) => {
     number,
   };
 
-  Person.findByIdAndUpdate(req.params.id, person, { new: true })
+  Person.findByIdAndUpdate(req.params.id, person, {
+    new: true,
+    runValidators: true,
+  })
     .then((person) => res.json(person))
     .catch((error) => next(error));
 });
 
-app.delete("/api/persons/:id", (req, res) => {
+app.delete("/api/persons/:id", (req, res, next) => {
   Person.findByIdAndDelete(req.params.id)
     .then(() => {
       res.status(204).end();
