@@ -39,9 +39,10 @@ app.get("/api/persons", (_, res) => {
 app.get("/api/persons/:id", (req, res) => {
   Person.findById(req.params.id)
     .then((person) => {
-      res.status(200).json(person);
+      if (person) return res.status(200).json(person);
+      else return res.status(404).end();
     })
-    .catch((error) => console.log("Couldn't find person", error.message));
+    .catch((error) => next(error));
 });
 
 app.post("/api/persons", (req, res) => {
@@ -51,12 +52,6 @@ app.post("/api/persons", (req, res) => {
   if (!name) return res.status(400).json({ error: "missing name" });
 
   Person.find({}).then((persons) => {
-    const nameIsNotUnique = persons.some((p) => p.name === name);
-
-    if (nameIsNotUnique) {
-      return res.status(400).json({ error: "name must be unique" });
-    }
-
     const person = new Person({
       name,
       number,
@@ -68,10 +63,27 @@ app.post("/api/persons", (req, res) => {
   });
 });
 
+app.put("/api/persons/:id", (req, res) => {
+  const { name, number } = req.body;
+
+  if (!number) return res.status(400).json({ error: "missing number" });
+
+  const person = {
+    name,
+    number,
+  };
+
+  Person.findByIdAndUpdate(req.params.id, person, { new: true })
+    .then((person) => res.json(person))
+    .catch((error) => next(error));
+});
+
 app.delete("/api/persons/:id", (req, res) => {
-  Person.findByIdAndDelete(req.params.id).then(() => {
-    res.status(204).end();
-  });
+  Person.findByIdAndDelete(req.params.id)
+    .then(() => {
+      res.status(204).end();
+    })
+    .catch((error) => next(error));
 });
 
 const unknownEndpoint = (_, response) => {
@@ -79,6 +91,18 @@ const unknownEndpoint = (_, response) => {
 };
 
 app.use(unknownEndpoint);
+
+const errorHandler = (error, _, response, next) => {
+  console.error(error.message);
+
+  if (error.name === "CastError") {
+    return response.status(400).send({ error: "malformatted id" });
+  }
+
+  next(error);
+};
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT;
 
