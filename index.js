@@ -64,8 +64,6 @@ app.post("/api/persons", (req, res, next) => {
 app.put("/api/persons/:id", (req, res, next) => {
   const { name, number } = req.body;
 
-  if (!number) return res.status(400).json({ error: "missing number" });
-
   const person = {
     name,
     number,
@@ -73,7 +71,6 @@ app.put("/api/persons/:id", (req, res, next) => {
 
   Person.findByIdAndUpdate(req.params.id, person, {
     new: true,
-    runValidators: true,
   })
     .then((person) => res.json(person))
     .catch((error) => next(error));
